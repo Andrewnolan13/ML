@@ -1,6 +1,18 @@
 class PredictionDataType:pass
 class TrainingDataTypes:pass
 
+def answer_question(question:tuple,feature_row:list)->bool:
+    '''
+    dim_feature,operation,value = 0, '==', 'Green'
+    dim_feature,operation,value = 1, '<=', 1
+    '''
+    dim_feature,operation,value = question
+    if operation == '==':
+        return feature_row[dim_feature] == value
+    else:
+        return feature_row[dim_feature] <= value
+
+
 class Node:
     def __init__(self,features:list,labels:list,parent = None):
         self.features = features
@@ -26,26 +38,20 @@ class Node:
             gini_number -= (self.labels.count(label)/self.count)**2
         return gini_number
 
+    def _midpoints(self,col:set)->list[float]:
+        distances = sorted(list(col))
+        distances = [(distances[i+1]+distances[i])/2 for i in range(len(distances)-1)] + [distances[-1]+1]
+        return distances
+        
     def generate_questions(self)->list[tuple]:
         dim_features:int = self.features[0].__len__()
         questions:list = list()
 
         for dim in range(dim_features):
             col = set([row[dim] for row in self.features])
-            questions += [(dim,'==' if isinstance(val,str) else '>=',val) for val in col]
+            questions += [(dim,'==' if isinstance(val,(str,bool)) else '<=',val) for val in col]
 
         return questions
-
-    def answer_question(self,question:tuple,feature_row:list)->bool:
-        '''
-        dim_feature,operation,value = 0, '==', 'Green'
-        dim_feature,operation,value = 1, '>=', 1
-        '''
-        dim_feature,operation,value = question
-        if operation == '==':
-            return feature_row[dim_feature] == value
-        else:
-            return feature_row[dim_feature] >= value
 
     def split_nodes(self,question:tuple)->tuple['Node','Node']:
         '''
@@ -53,7 +59,7 @@ class Node:
         '''
         false_features,true_features,false_labels,true_labels = [],[],[],[]
         for feature_row,label in zip(self.features,self.labels):
-            if self.answer_question(question,feature_row):
+            if answer_question(question,feature_row):
                 true_features.append(feature_row)
                 true_labels.append(label)
             else:
@@ -85,13 +91,12 @@ class Node:
             left_child.generate_children()
             right_child.generate_children()
         else:
-            if self.parent is not None:
-                self.parent.children.remove(self)
-                self.parent.children.append(Leaf(self))
+            index_of_self:int = self.parent.children.index(self)
+            self.parent.children[index_of_self] = Leaf(self)
 
 class Leaf(Node):
-    def __init__(self,parent:Node):
-        super().__init__(parent.features,parent.labels,parent = parent)
+    def __init__(self,bud:Node):
+        super().__init__(bud.features,bud.labels,parent = bud.parent)
         self.isLeaf = True
     
     def get_probabilities(self)->dict:
@@ -117,17 +122,7 @@ class DecisionTree:
 
     def fit(self):
         self.root.generate_children()
-
-    def answer_question(self,question:tuple,feature_row:list)->bool:
-        '''
-        dim_feature,operation,value = 0, '==', 'Green'
-        dim_feature,operation,value = 1, '>=', 1
-        '''
-        dim_feature,operation,value = question
-        if operation == '==':
-            return feature_row[dim_feature] == value
-        else:
-            return feature_row[dim_feature] >= value
+        self.depth = self._getDepth(self.root)
     
     def predict(self,feature_row:list,probabilities:bool = False)->PredictionDataType:
         node = self.root
@@ -137,7 +132,7 @@ class DecisionTree:
             if isinstance(node,Leaf):
                 break
             question = node.question
-            if self.answer_question(question,feature_row):#go right
+            if answer_question(question,feature_row):#go right
                 node = node.children[1]
             else:
                 node = node.children[0]
@@ -150,3 +145,43 @@ class DecisionTree:
             pred = self.predict(feature_row,probabilities)
             res.append([*feature_row,pred])
         return res
+    
+    def visualize(self,columns:list[str] = None):
+        if columns is None:
+            columns = list(range(self.features[0].__len__()))
+        def _visualize_node(node, depth=0):
+            indent = "  " * depth
+            if isinstance(node, Leaf):
+                print(f"{indent}Leaf: {node.predict()}")
+            else:
+                col = node.question[0]
+                print(f"{indent}Question: {columns[col]}{node.question[1]}{node.question[2]}")
+                _visualize_node(node.children[0], depth + 1)
+                _visualize_node(node.children[1], depth + 1)
+
+        _visualize_node(self.root)
+
+    def _getDepth(self,node,depth=-1):
+        if isinstance(node,Leaf):
+            return depth
+        else:
+            return max([self._getDepth(child,depth+1) for child in node.children])    
+    
+if __name__ == '__main__':
+    data = [
+        ['Green'    ,3,'Apple'],
+        ['Yellow'   ,3,'Apple'],
+        ['Red'      ,1,'Grape'],
+        ['Red'      ,1,'Grape'],
+        ['Yellow'   ,3,'Lemon'],
+    ]
+
+    X = [row[:2] for row in data]
+    y = [row[2] for row in data]
+
+    tree = DecisionTree(X,y)
+    tree.fit()
+    tree.predict_training_set()
+
+    accuracy = tree.predict_training_set()
+    print(sum([row[2] == datarow[2] for row,datarow in zip(accuracy,data)])/len(data))
