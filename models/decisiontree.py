@@ -49,7 +49,11 @@ class Node:
 
         for dim in range(dim_features):
             col = set([row[dim] for row in self.features])
-            questions += [(dim,'==' if isinstance(val,(str,bool)) else '<=',val) for val in col]
+            dtype = self.features[0][dim]
+            if isinstance(dtype,(str,bool)):
+                questions += [(dim,'==',val) for val in col]
+            else:
+                questions += [(dim,'<=',val) for val in self._midpoints(col)]
 
         return questions
 
