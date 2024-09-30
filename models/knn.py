@@ -34,7 +34,7 @@ class KNearestNeighbours:
         elif len(y.shape) == 1:
             return y.reshape((*y.shape,1))
         else:
-            raise ValueError("y.shape not as expected, got {}, expected (n,p,1) or (n,1) where n is number of observations an p is the dimension of the target vectors".format(y.shape))
+            raise ValueError("y.shape not as expected, got {}, expected (n,p) or (n,) where n is number of observations an p is the dimension of the target vectors".format(y.shape))
         
     def _infer_type(self)->str:
         if self.y.dtype.kind in ['U','O']:
