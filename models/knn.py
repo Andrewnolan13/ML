@@ -74,8 +74,8 @@ class KNearestNeighbours:
         given an array of shape (n,p)
         find the most common vector (p,)
         '''
-        reshaped_array = arr.reshape(arr.shape[0],arr.shape[1])
-        tuple_vectors = [tuple(vector) for vector in reshaped_array] #convert to tuples to make hashable
+        # reshaped_array = arr.reshape(arr.shape[0],arr.shape[1])
+        tuple_vectors = [tuple(vector) for vector in arr] #convert to tuples to make hashable
 
         return np.array(Counter(tuple_vectors).most_common(1)[0][0])
     
