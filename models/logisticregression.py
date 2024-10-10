@@ -88,7 +88,7 @@ class LogisticClassifier:
         # return np.array(dl_dtheta).reshape(-1,1)
         return self.Xprime.T.dot(differences)
     
-    def _backward(self,learning_rate:float,reg_lambda: float = 0.01)->None:
+    def _backward(self,learning_rate:float,reg_lambda: float)->None:
         self.theta += learning_rate * (self._dL_dtheta() - reg_lambda * self.theta) # L2 regularisation
 
     def _liklihood(self)->float:
@@ -105,7 +105,8 @@ class LogisticClassifier:
             num_iterations:int,
             tolerance:float = None,
             print_every:int = None,
-            training_history:bool = True
+            training_history:bool = True,
+            reg_lambda:float = 0.0
             )->None:
         '''
         learning_rate: float, the step size for gradient descent
@@ -113,11 +114,12 @@ class LogisticClassifier:
         tolerance: float, if 1-liklihood is less than this, stop
         print_every: int, if not None, print the liklihood every print_every iterations
         training_history: bool, if True, record the liklihood at each iteration
+        reg_lambda: float, the L2 regularisation parameter
 
         '''
         get_liklihood:bool = (training_history is not None) or (tolerance is not None) or (print_every is not None) 
         for i in range(num_iterations):
-            self._backward(learning_rate)
+            self._backward(learning_rate,reg_lambda)
             self._ypred = self._forward(self.Xprime)
             liklihood = self._liklihood() if get_liklihood else None # only calculate liklihood if needed
             self._iteration += 1
